@@ -1,7 +1,6 @@
-import macros, strutils
+import std/[macros, strutils]
 
 const moduleName = "assert/contracts"
-
 
 proc contractViolation(msg: string) {.noreturn.} =
   stderr.writeLine("CONTRACT VIOLATION:\n\t" & msg)
@@ -40,6 +39,24 @@ proc extractContracts(docComment: string): tuple[requires, ensures,
 
 macro contract*(procDef: untyped): untyped =
   ## Applies Design by Contract principles to a procedure based on its documentation.
+  ## example:
+  ## proc foo(x: int): int {.contract.} =
+  ##   ## Requires: x > 0
+  ##   ## Ensures: result > 0
+  ##   result = x + 1
+
+  ## The above code will be transformed into:
+  ## proc foo(x: int): int =
+  ##   if not(x > 0):
+  ##     let info = instantiationInfo()
+  ##     contractViolation(info.filename & ":" & $info.line &
+  ##       "\n\t\tPrecondition failed: x > 0")
+  ##   result = x + 1
+  ##   if not(result > 0):
+  ##     let info = instantiationInfo()
+  ##     contractViolation(info.filename & ":" & $info.line &
+  ##       "\n\t\tPostcondition failed: result > 0")
+
   result = procDef
   # For production builds, don't add contract checks
   if defined(noContracts):
